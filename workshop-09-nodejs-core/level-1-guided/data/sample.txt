@@ -1,0 +1,6 @@
+This is a sample file created for testing the File Manager CLI Tool.
+
+You can use this file to test the 'read', 'copy', and 'delete' commands.
+
+Workshop 9 - Node.js File Manager
+Level 1: Guided Workshop

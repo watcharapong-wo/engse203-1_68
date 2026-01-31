@@ -1,15 +1,19 @@
 {
-  "name": "level-1-guided",
+  "name": "file-manager-cli",
   "version": "1.0.0",
-  "description": "",
+  "description": "Simple CLI tool for file management",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "keywords": [
+    "cli",
+    "file-manager",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.2",
     "dotenv": "^17.2.3"
