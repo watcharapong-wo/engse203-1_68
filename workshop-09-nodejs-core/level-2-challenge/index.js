@@ -22,19 +22,28 @@ function showBanner() {
 function showHelp() {
   console.log('Usage: node index.js <command> [arguments]\n');
   console.log('Commands:');
-  console.log('  add <title> [priority]       - Add a new task (priority: low/medium/high)');
-  console.log('  list [filter]                - List tasks (filter: all/pending/completed)');
-  console.log('  complete <id>                - Mark task as completed');
-  console.log('  delete <id>                  - Delete a task');
-  console.log('  update <id> <title>          - Update task title');
-  console.log('  stats                        - Show statistics');
-  console.log('  export <filename>            - Export tasks to JSON file');
-  console.log('  import <filename>            - Import tasks from JSON file');
-  console.log('  help                         - Show this help\n');
+  console.log('  add <title> [priority] [options]  - Add a new task (priority: low/medium/high)');
+  console.log('  list [filter] [options]           - List tasks (filter: all/pending/completed)');
+  console.log('  complete <id>                     - Mark task as completed');
+  console.log('  delete <id>                       - Delete a task');
+  console.log('  update <id> <title>               - Update task title');
+  console.log('  stats                             - Show statistics');
+  console.log('  export <filename>                 - Export tasks to JSON file');
+  console.log('  import <filename>                 - Import tasks from JSON file');
+  console.log('  search <keyword>                  - 🎁 BONUS: Search tasks by keyword');
+  console.log('  help                              - Show this help\n');
+  console.log('Options:');
+  console.log('  --sort <priority|date>            - 🎁 BONUS: Sort tasks');
+  console.log('  --due <YYYY-MM-DD>                - 🎁 BONUS: Set due date');
+  console.log('  --tag <tagname>                   - 🎁 BONUS: Add/filter by tag');
+  console.log('  --overdue                         - 🎁 BONUS: Show overdue tasks\n');
   console.log('Examples:');
   console.log('  node index.js add "Buy groceries" high');
-  console.log('  node index.js list pending');
-  console.log('  node index.js complete 1');
+  console.log('  node index.js add "Meeting" high --due 2024-12-31 --tag work');
+  console.log('  node index.js list pending --sort priority');
+  console.log('  node index.js list --overdue');
+  console.log('  node index.js list --tag work');
+  console.log('  node index.js search "Node"');
 }
 
 // Main function
@@ -52,12 +61,20 @@ async function main() {
           break;
         }
         const priority = args[2] || 'medium';
-        await taskManager.addTask(args[1], priority);
+        const dueDate = args.find(arg => arg.startsWith('--due'));
+        const tag = args.find(arg => arg.startsWith('--tag'));
+        const options = {};
+        if (dueDate) options.dueDate = args[args.indexOf(dueDate) + 1];
+        if (tag) options.tag = args[args.indexOf(tag) + 1];
+        await taskManager.addTask(args[1], priority, options);
         break;
 
       case 'list':
-        const filter = args[1] || 'all';
-        await taskManager.listTasks(filter);
+        const filter = args[1] && !args[1].startsWith('--') ? args[1] : 'all';
+        const sortBy = args.find(arg => arg === '--sort') ? args[args.indexOf('--sort') + 1] : null;
+        const filterTag = args.find(arg => arg === '--tag') ? args[args.indexOf('--tag') + 1] : null;
+        const showOverdue = args.includes('--overdue');
+        await taskManager.listTasks(filter, { sortBy, tag: filterTag, overdue: showOverdue });
         break;
 
       case 'complete':
@@ -102,6 +119,14 @@ async function main() {
           break;
         }
         await taskManager.importTasks(args[1]);
+        break;
+
+      case 'search':
+        if (!args[1]) {
+          logger.error('Please provide search keyword');
+          break;
+        }
+        await taskManager.searchTasks(args[1]);
         break;
 
       case 'help':

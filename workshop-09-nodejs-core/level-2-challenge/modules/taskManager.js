@@ -23,53 +23,38 @@ class TaskManager {
   }
 
   // เพิ่ม task ใหม่
-  async addTask(title, priority = 'medium') {
+  async addTask(title, priority = 'medium', options = {}) {
     await this.loadTasks();
 
-    // TODO: สร้าง task object ใหม่
-    // ควรมี properties: id, title, priority, completed, createdAt
-    // priority ต้องเป็น low, medium, หรือ high เท่านั้น
-    
-    // 💡 คำแนะนำ:
-    // 1. ตรวจสอบ priority ว่าถูกต้องหรือไม่ (low/medium/high)
-    // 2. สร้าง task object ด้วย id, title, priority, completed, createdAt
-    // 3. ใช้ this.nextId สำหรับ id
-    // 4. ใช้ new Date().toISOString() สำหรับ timestamp
-    
-    // 📝 ตัวอย่าง structure:
-    // const task = {
-    //   id: this.nextId++,
-    //   title: title,
-    //   priority: validPriority,
-    //   completed: false,
-    //   createdAt: new Date().toISOString()
-    // };
-    
-    // ============================================
-    // YOUR CODE HERE (ประมาณ 10 บรรทัด)
-    // ============================================
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    // ============================================
+    // Validate priority
+    const validPriorities = ['low', 'medium', 'high'];
+    const validPriority = validPriorities.includes(priority.toLowerCase()) 
+      ? priority.toLowerCase() 
+      : 'medium';
+
+    // Create task object
+    const task = {
+      id: this.nextId++,
+      title: title,
+      priority: validPriority,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      ...(options.dueDate && { dueDate: options.dueDate }),
+      ...(options.tag && { tag: options.tag })
+    };
 
     this.tasks.push(task);
     await this.saveTasks();
     
-    logger.success(`Task added: "${title}" (ID: ${task.id})`);
+    let message = `Task added: "${title}" (ID: ${task.id})`;
+    if (task.dueDate) message += ` 📅 Due: ${task.dueDate}`;
+    if (task.tag) message += ` 🏷️ Tag: ${task.tag}`;
+    logger.success(message);
     return task;
   }
 
   // แสดงรายการ tasks
-  async listTasks(filter = 'all') {
+  async listTasks(filter = 'all', options = {}) {
     await this.loadTasks();
 
     if (this.tasks.length === 0) {
@@ -77,74 +62,63 @@ class TaskManager {
       return;
     }
 
-    // TODO: กรอง tasks ตาม filter (all/pending/completed)
+    // Filter tasks
+    let filteredTasks = this.tasks;
     
-    // 💡 คำแนะนำ:
-    // 1. ถ้า filter = 'pending' -> แสดงเฉพาะ completed = false
-    // 2. ถ้า filter = 'completed' -> แสดงเฉพาะ completed = true
-    // 3. ถ้า filter = 'all' -> แสดงทั้งหมด
-    
-    // 📝 ตัวอย่าง:
-    // let filteredTasks = this.tasks;
-    // if (filter === 'pending') {
-    //   filteredTasks = this.tasks.filter(t => !t.completed);
-    // } else if (filter === 'completed') {
-    //   filteredTasks = this.tasks.filter(t => t.completed);
-    // }
-    
-    // ============================================
-    // YOUR CODE HERE (ประมาณ 6 บรรทัด)
-    // ============================================
-    
-    
-    
-    
-    
-    
-    
-    // ============================================
+    if (filter === 'pending') {
+      filteredTasks = this.tasks.filter(t => !t.completed);
+    } else if (filter === 'completed') {
+      filteredTasks = this.tasks.filter(t => t.completed);
+    }
+
+    // Filter by tag
+    if (options.tag) {
+      filteredTasks = filteredTasks.filter(t => t.tag === options.tag);
+    }
+
+    // Filter overdue tasks
+    if (options.overdue) {
+      const now = new Date();
+      filteredTasks = filteredTasks.filter(t => 
+        t.dueDate && new Date(t.dueDate) < now && !t.completed
+      );
+    }
+
+    // Sort tasks
+    if (options.sortBy === 'priority') {
+      const priorityOrder = { high: 1, medium: 2, low: 3 };
+      filteredTasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+    } else if (options.sortBy === 'date') {
+      filteredTasks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
 
     if (filteredTasks.length === 0) {
       logger.warning(`No ${filter} tasks found`);
       return;
     }
 
-    // แสดงผลแบบ table
-    logger.info(`\n${filter.toUpperCase()} TASKS:\n`);
+    // Display as table
+    const filterLabel = options.overdue ? 'OVERDUE' : 
+                       options.tag ? `${options.tag.toUpperCase()} TAG` : 
+                       filter.toUpperCase();
+    logger.info(`\n${filterLabel} TASKS:\n`);
     
-    // TODO: จัดรูปแบบข้อมูลให้แสดงเป็น table
-    // แสดง: ID, Title, Priority, Status, Created
+    const displayData = filteredTasks.map(task => {
+      const priorityEmoji = task.priority === 'high' ? '🔴' : 
+                           task.priority === 'medium' ? '🟡' : '🟢';
+      const obj = {
+        ID: task.id,
+        Title: task.title.length > 30 ? task.title.substring(0, 27) + '...' : task.title,
+        Priority: `${priorityEmoji} ${task.priority.toUpperCase()}`,
+        Status: task.completed ? '✓ Done' : '⏳ Pending',
+        Created: new Date(task.createdAt).toLocaleDateString('th-TH')
+      };
+      if (task.dueDate) obj.Due = task.dueDate;
+      if (task.tag) obj.Tag = task.tag;
+      return obj;
+    });
     
-    // 💡 คำแนะนำ:
-    // 1. สร้าง array ของ objects สำหรับแสดงใน table
-    // 2. แปลง completed (true/false) เป็น text (✓ Done / ⏳ Pending)
-    // 3. แปลง priority เป็น emoji หรือสี
-    // 4. จัดรูปแบบ date ให้อ่านง่าย
-    // 5. ใช้ logger.table() หรือ console.table()
-    
-    // 📝 ตัวอย่าง:
-    // const displayData = filteredTasks.map(task => ({
-    //   ID: task.id,
-    //   Title: task.title,
-    //   Priority: task.priority.toUpperCase(),
-    //   Status: task.completed ? '✓ Done' : '⏳ Pending',
-    //   Created: new Date(task.createdAt).toLocaleDateString()
-    // }));
-    // logger.table(displayData);
-    
-    // ============================================
-    // YOUR CODE HERE (ประมาณ 8 บรรทัด)
-    // ============================================
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    // ============================================
+    logger.table(displayData);
     
     console.log(`\nTotal: ${filteredTasks.length} task(s)\n`);
   }
@@ -344,18 +318,41 @@ class TaskManager {
     // YOUR CODE HERE (ประมาณ 8 บรรทัด)
     // ============================================
     
-    
-    
-    
-    
-    
-    
-    
-    
-    // ============================================
-    
     await this.saveTasks();
     logger.success(`Tasks imported from ${filename}`);
+  }
+
+  // 🎁 BONUS 1: Search tasks
+  async searchTasks(keyword) {
+    await this.loadTasks();
+
+    const results = this.tasks.filter(task => 
+      task.title.toLowerCase().includes(keyword.toLowerCase()) ||
+      (task.tag && task.tag.toLowerCase().includes(keyword.toLowerCase()))
+    );
+
+    if (results.length === 0) {
+      logger.warning(`No tasks found matching "${keyword}"`);
+      return;
+    }
+
+    logger.info(`\n🔍 SEARCH RESULTS for "${keyword}":\n`);
+    
+    const displayData = results.map(task => {
+      const priorityEmoji = task.priority === 'high' ? '🔴' : 
+                           task.priority === 'medium' ? '🟡' : '🟢';
+      const obj = {
+        ID: task.id,
+        Title: task.title,
+        Priority: `${priorityEmoji} ${task.priority.toUpperCase()}`,
+        Status: task.completed ? '✓ Done' : '⏳ Pending'
+      };
+      if (task.tag) obj.Tag = task.tag;
+      return obj;
+    });
+    
+    logger.table(displayData);
+    console.log(`\nFound: ${results.length} task(s)\n`);
   }
 }
 
